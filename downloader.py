@@ -50,7 +50,7 @@ def main(thread_link, dest_dir):
         write_img_data(img_data, img_loc)
 
 if __name__ == "__main__":
-    # Parse command-line arguments
+    # Parse commandline arguments
     parser = argparse.ArgumentParser(description="Download all images from a 4chan thread")
     parser.add_argument("-thread", type=str, help="The link where the images are located", dest="thread_link")
     parser.add_argument("-dest", type=str, help="Directory to place the downloaded images", dest="dest_dir")
