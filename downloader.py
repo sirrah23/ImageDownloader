@@ -2,8 +2,9 @@ import os
 import shutil
 import errno
 import argparse
+import time
+import multiprocessing
 import requests
-from clint.textui import progress
 from bs4 import BeautifulSoup
 
 # Grab all of the image links that are on a thread
@@ -37,26 +38,37 @@ def write_img_data(img_data, loc):
     with open(loc, "wb") as f:
         shutil.copyfileobj(img_data, f)
 
+# Compute the path+name for the new image based on a root directory + its link
+def compute_img_loc(root_dir, img_link):
+    return "{}/{}".format(root_dir, extract_img_name(img_link))
+
+def download_and_write(link_loc):
+    img_link, img_loc = link_loc
+    print("Downloading {}".format(img_link))
+    img_data = download_img_data(img_link)
+    write_img_data(img_data, img_loc)
+
 # Download all images from a thread to a destination
 def main(thread_link, dest_dir):
     img_links = get_all_img_links(thread_link)
     res = create_dir(dest_dir)
     if not res:
         return
-    for i in progress.bar(range(len(img_links))):
-        img_link = img_links[i]
-        img_data = download_img_data(img_link)
-        img_loc = "{}/{}".format(dest_dir, extract_img_name(img_link))
-        write_img_data(img_data, img_loc)
+    pool = multiprocessing.Pool()
+    downloads = [(img_link, compute_img_loc(dest_dir, img_link)) for img_link in img_links ]
+    _ = pool.map(download_and_write, downloads)
 
 if __name__ == "__main__":
     # Parse commandline arguments
     parser = argparse.ArgumentParser(description="Download all images from a 4chan thread")
-    parser.add_argument("-thread", type=str, help="The link where the images are located", dest="thread_link")
-    parser.add_argument("-dest", type=str, help="Directory to place the downloaded images", dest="dest_dir")
+    parser.add_argument("-thread", type=str, help="The link where the images are located", dest="thread_link", required=True)
+    parser.add_argument("-dest", type=str, help="Directory to place the downloaded images", dest="dest_dir", required=True)
     args = parser.parse_args()
 
     # Run the downloader
     thread_link = args.thread_link
     dest_dir = args.dest_dir
+    start = time.time()
     main(thread_link, dest_dir)
+    end = time.time()
+    print("Elapsed time: {} seconds".format(end-start))
